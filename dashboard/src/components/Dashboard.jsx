@@ -74,9 +74,9 @@ export default function Dashboard() {
                   <Download size={20} />
                   <span className="font-bold">Download Extension (ZIP)</span>
                 </a>
-                <a href="/CyberGuard_Installer.exe" download="CyberGuard_Installer.exe" className="w-full flex items-center justify-center gap-2 text-cyber-accent hover:bg-slate-800 rounded-lg transition p-3 border border-slate-700">
+                <a href="/CyberGuard_Setup.zip" download="CyberGuard_Setup.zip" className="w-full flex items-center justify-center gap-2 text-cyber-accent hover:bg-slate-800 rounded-lg transition p-3 border border-slate-700">
                   <Shield size={20} />
-                  <span className="font-bold">Download Desktop Agent (EXE)</span>
+                  <span className="font-bold">Download Agent (ZIP)</span>
                 </a>
               </>
             )}
