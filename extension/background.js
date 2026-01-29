@@ -1,4 +1,4 @@
-let API_URL = "http://localhost:8000"; // Will be updated dynamically if possible
+let API_URL = "https://cyberguard-backend-l2yo.onrender.com"; // Will be updated dynamically if possible
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "SAVE_TOKEN") {
