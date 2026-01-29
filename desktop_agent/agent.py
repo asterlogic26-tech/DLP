@@ -295,7 +295,7 @@ def monitor_clipboard():
     if sys.stderr is None:
         sys.stderr = open(os.devnull, 'w')
 
-    print("🛡️  CyberGuard Desktop Agent Running (ADMIN MODE)...")
+    print(">>> CyberGuard Desktop Agent Running (ADMIN MODE)...")
     print("   Monitoring Clipboard, Files, USB, and Processes...")
     
     # Start File Monitor
@@ -338,7 +338,7 @@ def monitor_clipboard():
             time.sleep(1)
     except KeyboardInterrupt:
         observer.stop()
-        print("\n🛑 Agent Stopped.")
+        print("\n[!] Agent Stopped.")
     observer.join()
 
 if __name__ == "__main__":
