@@ -1,6 +1,6 @@
 document.getElementById("dashboard-btn").addEventListener("click", () => {
   // Open the deployed dashboard URL (or localhost for dev)
-  chrome.tabs.create({ url: "http://localhost:5173" }); // Update this after deployment!
+  chrome.tabs.create({ url: "https://www.networknimble.info" }); // Update this after deployment!
 });
 
 chrome.storage.local.get("token", (data) => {
