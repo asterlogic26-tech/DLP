@@ -14,11 +14,16 @@ chrome.runtime.sendMessage({ type: "GET_TOKEN" }, (response) => {
   }
 });
 
-// Sync Token from Dashboard if we are on the dashboard
-if (window.location.href.includes("extension-blocker") || window.location.href.includes("dlp") || window.location.href.includes("localhost")) {
+// Token Sync Check (Add debug logs)
+if (window.location.href.includes("networknimble.info") || window.location.href.includes("localhost")) {
+  console.log("CyberGuard: Detected Dashboard. Syncing token...");
   const token = localStorage.getItem("token");
   if (token) {
-    chrome.runtime.sendMessage({ type: "SAVE_TOKEN", token: token });
+    chrome.runtime.sendMessage({ type: "SAVE_TOKEN", token: token }, () => {
+       console.log("CyberGuard: Token sent to extension.");
+    });
+  } else {
+    console.warn("CyberGuard: No token found in localStorage.");
   }
 }
 
