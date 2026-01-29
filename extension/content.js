@@ -67,6 +67,21 @@ document.addEventListener("input", (e) => {
 
 // Adult Content / Spam Keywords (Simple version)
 const BAD_KEYWORDS = ["xxx", "porn", "lottery winner", "click here to claim"];
+
+// Phishing / Spam Email Keywords
+const PHISHING_KEYWORDS = [
+  "verify your account",
+  "urgent action required",
+  "bank account suspended",
+  "update your payment details",
+  "confirm your identity",
+  "unusual login attempt",
+  "your account will be closed",
+  "claim your refund",
+  "winner of lottery"
+];
+
+// Check for Adult Content (Blocking)
 const pageText = document.body.innerText.toLowerCase();
 if (BAD_KEYWORDS.some(kw => pageText.includes(kw))) {
   // 1. Block the Content
@@ -95,6 +110,44 @@ if (BAD_KEYWORDS.some(kw => pageText.includes(kw))) {
       description: "Adult/Spam content blocked",
       url: window.location.href,
       action_taken: "BLOCKED"
+    }
+  });
+}
+
+// Check for Phishing / Spam Emails (Warning only, don't block whole page)
+const isMailSite = window.location.hostname.includes("mail.google.com") || 
+                   window.location.hostname.includes("outlook.live.com") || 
+                   window.location.hostname.includes("yahoo.com");
+
+if (isMailSite && PHISHING_KEYWORDS.some(kw => pageText.includes(kw))) {
+  // Show a warning banner at the top
+  const warningBanner = document.createElement("div");
+  warningBanner.style.cssText = `
+    position: fixed; top: 0; left: 0; width: 100%; 
+    background: #ef4444; color: white; 
+    z-index: 9999999; font-family: sans-serif; 
+    padding: 15px; text-align: center; font-weight: bold;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  `;
+  warningBanner.innerHTML = `
+    ⚠️ CAUTION: CyberGuard detected potential PHISHING or SPAM content in this email. 
+    Do not click links or download attachments.
+    <button id="cg-dismiss-spam" style="margin-left: 20px; background: white; color: #ef4444; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Dismiss</button>
+  `;
+  document.body.appendChild(warningBanner);
+
+  document.getElementById("cg-dismiss-spam").onclick = () => {
+    warningBanner.remove();
+  };
+
+  // Report event
+  chrome.runtime.sendMessage({
+    type: "LOG_EVENT",
+    data: {
+      event_type: "PHISHING_DETECTED",
+      description: "Potential phishing email content detected",
+      url: window.location.href,
+      action_taken: "WARNING_SHOWN"
     }
   });
 }
