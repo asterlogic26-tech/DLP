@@ -2,7 +2,7 @@ services:
   - type: web
     name: cyberguard-backend
     runtime: python
-    repo: https://github.com/asterlogic26-tech/extension-blocker
+    repo: https://github.com/asterlogic26-tech/DLP.git
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
