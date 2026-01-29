@@ -282,10 +282,18 @@ def start_file_monitoring():
 
 def monitor_clipboard():
     if not is_admin():
-        print("\n[!] ERROR: This agent must be run as ADMINISTRATOR to block USB/Installs.")
-        print("    Right-click -> Run as Administrator")
-        input("Press Enter to exit...")
+        root = tk.Tk()
+        root.withdraw()
+        messagebox.showerror("Administrator Required", "CyberGuard Agent must be run as Administrator to function correctly.\n\nPlease right-click the app and select 'Run as Administrator'.")
+        root.destroy()
         return
+
+    # In windowed mode (PyInstaller --noconsole), print() might fail or go nowhere.
+    # We redirect stdout/stderr to null to prevent "Bad file descriptor" errors if they occur.
+    if sys.stdout is None:
+        sys.stdout = open(os.devnull, 'w')
+    if sys.stderr is None:
+        sys.stderr = open(os.devnull, 'w')
 
     print("🛡️  CyberGuard Desktop Agent Running (ADMIN MODE)...")
     print("   Monitoring Clipboard, Files, USB, and Processes...")
