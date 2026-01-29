@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: dlp-backend
+    env: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: gunicorn -k uvicorn.workers.UvicornWorker backend.main:app
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dlp-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+
+  - type: web
+    name: dlp-dashboard
+    env: node
+    buildCommand: cd dashboard && npm install && npm run build
+    startCommand: cd dashboard && npm run preview
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: dlp-backend
+          property: url
+
+databases:
+  - name: dlp-db
+    databaseName: dlp
+    user: dlp_user
