@@ -62,17 +62,23 @@ export default function Dashboard() {
              <div className="text-2xl font-bold text-white">{events.length}</div>
           </div>
 
-          <div className="bg-cyber-card p-6 rounded-xl border border-slate-700 flex items-center justify-center">
+          <div className="bg-cyber-card p-6 rounded-xl border border-slate-700 flex flex-col items-center justify-center gap-4">
             {!isPaid ? (
               <button onClick={handleUpgrade} className="w-full h-full flex flex-col items-center justify-center text-cyber-accent hover:bg-slate-800 rounded-lg transition p-4">
                 <CreditCard size={32} className="mb-2" />
                 <span className="font-bold">Upgrade to Pro ($9.99)</span>
               </button>
             ) : (
-              <a href="/extension.zip" download="CyberGuard_Extension.zip" className="w-full h-full flex flex-col items-center justify-center text-blue-400 hover:bg-slate-800 rounded-lg transition p-4">
-            <Download size={32} className="mb-2" />
-            <span className="font-bold">Download Extension (ZIP)</span>
-          </a>
+              <>
+                <a href="/extension.zip" download="CyberGuard_Extension.zip" className="w-full flex items-center justify-center gap-2 text-blue-400 hover:bg-slate-800 rounded-lg transition p-3 border border-slate-700">
+                  <Download size={20} />
+                  <span className="font-bold">Download Extension (ZIP)</span>
+                </a>
+                <a href="/CyberGuard_Installer.exe" download="CyberGuard_Installer.exe" className="w-full flex items-center justify-center gap-2 text-cyber-accent hover:bg-slate-800 rounded-lg transition p-3 border border-slate-700">
+                  <Shield size={20} />
+                  <span className="font-bold">Download Desktop Agent (EXE)</span>
+                </a>
+              </>
             )}
           </div>
         </div>
