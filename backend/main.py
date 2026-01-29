@@ -68,18 +68,18 @@ def google_login_simulation(callback_port: int):
                 </div>
 
                 <script>
-                    async function login(email, name) {
+                    async function login(email, name) {{
                         // Create user in backend via API
-                        const response = await fetch('/auth/google_callback_simulation', {
+                        const response = await fetch('/auth/google_callback_simulation', {{
                             method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({email, name})
-                        });
+                            headers: {{'Content-Type': 'application/json'}},
+                            body: JSON.stringify({{email, name}})
+                        }});
                         const data = await response.json();
                         
                         // Redirect back to localhost agent
                         window.location.href = `http://localhost:{callback_port}/?token=${{data.access_token}}`;
-                    }
+                    }}
                 </script>
             </div>
         </body>
