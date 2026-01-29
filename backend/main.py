@@ -4,7 +4,6 @@ from sqlalchemy.orm import Session
 from typing import List
 import uuid
 import os
-import razorpay
 import json
 
 # Fix for running as script
@@ -26,12 +25,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Razorpay Client
-RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY", "YOUR_KEY_ID")
-RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_SECRET", "YOUR_KEY_SECRET")
-RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET", "YOUR_WEBHOOK_SECRET")
-
-razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+# Payments temporarily disabled; Razorpay removed
 
 @app.post("/auth/login", response_model=schemas.Token)
 def login(user_in: schemas.UserLogin, db: Session = Depends(database.get_db)):
@@ -78,82 +72,12 @@ def get_status(
     current_user: dict = Depends(auth.get_current_user),
     db: Session = Depends(database.get_db)
 ):
-    sub = db.query(models.Subscription).filter(
-        models.Subscription.user_id == current_user["id"]
-    ).first()
-    
-    is_active = sub is not None and sub.status == "active"
-    return {"active": is_active}
+    # Temporarily consider all users active until payments are re-enabled
+    return {"active": True}
 
-@app.post("/subscription/create")
-def create_subscription(
-    sub_in: schemas.SubscriptionCreate,
-    current_user: dict = Depends(auth.get_current_user),
-    db: Session = Depends(database.get_db)
-):
-    plan_id = os.getenv("RAZORPAY_B2C_PLAN") if sub_in.plan == "B2C" else os.getenv("RAZORPAY_B2B_PLAN")
-    if not plan_id:
-        # Fallback for testing/demo
-        plan_id = "plan_test_id"
+# Subscription creation removed
 
-    try:
-        subscription = razorpay_client.subscription.create({
-            "plan_id": plan_id,
-            "customer_notify": 1,
-            "total_count": 120 # 10 years
-        })
-        
-        db_sub = models.Subscription(
-            user_id=current_user["id"],
-            razorpay_subscription_id=subscription['id'],
-            plan=sub_in.plan,
-            status="created"
-        )
-        db.add(db_sub)
-        db.commit()
-        
-        return subscription
-    except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/webhook/razorpay")
-async def razorpay_webhook(request: Request, db: Session = Depends(database.get_db)):
-    body = await request.body()
-    signature = request.headers.get("x-razorpay-signature")
-    
-    try:
-        razorpay_client.utility.verify_webhook_signature(
-            body.decode(), signature, RAZORPAY_WEBHOOK_SECRET
-        )
-    except razorpay.errors.SignatureVerificationError:
-        raise HTTPException(status_code=400, detail="Invalid signature")
-
-    data = await request.json()
-    event = data.get("event")
-    
-    # Payload structure varies, usually payload.subscription.entity
-    try:
-        payload = data.get("payload", {})
-        sub_entity = payload.get("subscription", {}).get("entity", {})
-        sub_id = sub_entity.get("id")
-        
-        if sub_id:
-            sub = db.query(models.Subscription).filter(
-                models.Subscription.razorpay_subscription_id == sub_id
-            ).first()
-            
-            if sub:
-                if event == "subscription.activated":
-                    sub.status = "active"
-                elif event == "subscription.cancelled":
-                    sub.status = "cancelled"
-                
-                db.commit()
-    except Exception as e:
-        print(f"Webhook processing error: {e}")
-
-    return {"status": "ok"}
+# Razorpay webhook removed
 
 
 @app.post("/events", response_model=dict)

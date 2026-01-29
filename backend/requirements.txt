@@ -7,4 +7,3 @@ passlib[bcrypt]
 python-multipart
 google-auth
 requests
-razorpay

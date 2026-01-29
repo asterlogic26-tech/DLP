@@ -1,18 +1,17 @@
 import { useEffect, useState } from "react";
 import { api } from "./api";
-import { Shield, Activity, LogOut, Menu, Search, CreditCard } from "lucide-react";
-import Subscribe from "./Subscribe";
+import { Shield, Activity, LogOut, Menu } from "lucide-react";
 
 export default function Dashboard({ onLogout }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState("loading"); // loading | dashboard | subscribe
-  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [view, setView] = useState("loading"); // loading | dashboard
+  const [isSubscribed, setIsSubscribed] = useState(true);
 
   useEffect(() => {
     if (!localStorage.token) return;
 
-    // Check Subscription Status First
+    // Check Subscription Status (temporarily always active server-side)
     api("/auth/status")
       .then(statusData => {
         if (statusData.active) {
@@ -22,7 +21,6 @@ export default function Dashboard({ onLogout }) {
           return api("/events");
         } else {
           setIsSubscribed(false);
-          setView("subscribe");
           setLoading(false);
           return null;
         }
@@ -35,8 +33,7 @@ export default function Dashboard({ onLogout }) {
       })
       .catch(() => {
         setLoading(false);
-        // Default to subscribe on error to be safe
-        setView("subscribe"); 
+        setView("dashboard"); 
       });
   }, []);
 
@@ -59,28 +56,14 @@ export default function Dashboard({ onLogout }) {
         
         <div className="flex-1 overflow-y-auto">
           <nav className="px-2 py-4 space-y-1">
-            {isSubscribed ? (
-              <>
-                <button 
-                  onClick={() => setView("dashboard")}
-                  className={`w-full flex items-center px-4 py-3 rounded-md transition-colors ${view === 'dashboard' ? 'bg-indigo-900 text-white' : 'text-indigo-100 hover:bg-indigo-700'}`}
-                >
-                  <Activity className="h-5 w-5 mr-3" />
-                  Dashboard
-                </button>
-                <button 
-                  onClick={() => setView("subscribe")}
-                  className={`w-full flex items-center px-4 py-3 rounded-md transition-colors ${view === 'subscribe' ? 'bg-indigo-900 text-white' : 'text-indigo-100 hover:bg-indigo-700'}`}
-                >
-                  <CreditCard className="h-5 w-5 mr-3" />
-                  Subscription
-                </button>
-              </>
-            ) : (
-              <div className="px-4 py-3 text-indigo-200 text-sm">
-                Subscription Required
-              </div>
-            )}
+            <button 
+              onClick={() => setView("dashboard")}
+              className={`w-full flex items-center px-4 py-3 rounded-md transition-colors ${view === 'dashboard' ? 'bg-indigo-900 text-white' : 'text-indigo-100 hover:bg-indigo-700'}`}
+            >
+              {/* Icon removed to avoid unused import */}
+              <span className="h-5 w-5 mr-3">🏠</span>
+              Dashboard
+            </button>
           </nav>
         </div>
         
@@ -101,19 +84,12 @@ export default function Dashboard({ onLogout }) {
               <Menu className="h-6 w-6" />
             </button>
           </div>
-          <h1 className="text-2xl font-semibold text-gray-800">
-            {view === "dashboard" ? "Security Overview" : "Manage Subscription"}
-          </h1>
+          <h1 className="text-2xl font-semibold text-gray-800">Security Overview</h1>
         </header>
 
         {/* Content Body */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
-          {view === "subscribe" ? (
-             <Subscribe onSubscribe={() => {
-               setIsSubscribed(true);
-               setView("dashboard");
-             }} />
-          ) : (
+            {
             <>
               {/* Install Extension Banner */}
               <div className="bg-indigo-600 rounded-lg shadow-lg p-6 mb-8 text-white">
@@ -121,7 +97,7 @@ export default function Dashboard({ onLogout }) {
                   <div>
                     <h2 className="text-xl font-bold mb-2">Step 3: Install Protection</h2>
                     <p className="text-indigo-100">
-                      Your subscription is active! Install the extension to start blocking distraction.
+                      Protection is active. Install the extension to start blocking distraction.
                     </p>
                   </div>
                   <button 
@@ -137,7 +113,7 @@ export default function Dashboard({ onLogout }) {
                 <div className="bg-white rounded-lg shadow p-6 border-l-4 border-indigo-500">
                   <div className="flex items-center">
                     <div className="p-3 rounded-full bg-indigo-100 text-indigo-500">
-                      <Activity className="h-8 w-8" />
+                      <span className="h-8 w-8">📊</span>
                     </div>
                     <div className="ml-4">
                       <p className="mb-2 text-sm font-medium text-gray-600">Total Events</p>
