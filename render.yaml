@@ -6,7 +6,7 @@ services:
     region: singapore # Choose your preferred region
     plan: free # or starter/standard
     buildCommand: pip install -r backend/requirements.txt
-    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port 10000
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
@@ -22,13 +22,12 @@ services:
       #     property: connectionString
 
   # Frontend Service (React/Vite)
-  - type: static
+  - type: static_site
     name: dlp-dashboard
-    runtime: static
     region: singapore
     plan: free
     buildCommand: cd dashboard && npm install && npm run build
-    publishDir: dashboard/dist
+    publishPath: dashboard/dist
     envVars:
       - key: VITE_API_URL
         fromService:
