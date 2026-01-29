@@ -2,7 +2,7 @@ services:
   # Backend Service (Python/FastAPI)
   - type: web
     name: dlp-backend
-    runtime: python
+    env: python
     region: singapore # Choose your preferred region
     plan: free # or starter/standard
     buildCommand: pip install -r backend/requirements.txt
@@ -27,7 +27,7 @@ services:
     region: singapore
     plan: free
     buildCommand: cd dashboard && npm install && npm run build
-    publishPath: dashboard/dist
+    staticPublishPath: dashboard/dist
     envVars:
       - key: VITE_API_URL
         fromService:
