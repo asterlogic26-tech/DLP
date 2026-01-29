@@ -38,16 +38,33 @@ def google_login(login_data: schemas.GoogleLogin, db: Session = Depends(database
     access_token = auth.create_access_token(data={"sub": str(user.id)})
     return {"access_token": access_token, "token_type": "bearer", "is_paid": user.is_paid}
 
-@app.post("/auth/simple", response_model=schemas.Token)
-def simple_login(login_data: schemas.SimpleLogin, db: Session = Depends(database.get_db)):
-    """Simple email login for Desktop Agent (MVP)"""
-    email = login_data.email
-    user = db.query(models.User).filter(models.User.email == email).first()
+@app.post("/auth/signup", response_model=schemas.Token)
+def signup(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
+    db_user = db.query(models.User).filter(models.User.email == user.email).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    hashed_password = auth.get_password_hash(user.password)
+    db_user = models.User(email=user.email, hashed_password=hashed_password, full_name=user.full_name)
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    
+    access_token = auth.create_access_token(data={"sub": str(db_user.id)})
+    return {"access_token": access_token, "token_type": "bearer", "is_paid": db_user.is_paid}
+
+@app.post("/auth/login", response_model=schemas.Token)
+def login(user_credentials: schemas.UserLogin, db: Session = Depends(database.get_db)):
+    user = db.query(models.User).filter(models.User.email == user_credentials.email).first()
     if not user:
-        user = models.User(email=email, full_name="Desktop User")
-        db.add(user)
-        db.commit()
-        db.refresh(user)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    
+    if not user.hashed_password:
+        # If user was created via Google Login or Simple Login, they don't have a password
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please login with Google or reset password")
+        
+    if not auth.verify_password(user_credentials.password, user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     
     access_token = auth.create_access_token(data={"sub": str(user.id)})
     return {"access_token": access_token, "token_type": "bearer", "is_paid": user.is_paid}

@@ -125,34 +125,76 @@ def block_installations():
             pass
         time.sleep(2)
 
+import webbrowser
+
 def login_prompt():
-    """Ask user for email and get token from backend"""
+    """Ask user for email/password and get token from backend"""
     root = tk.Tk()
     root.withdraw() # Hide main window
     
-    # Make sure it's on top
-    root.attributes("-topmost", True)
+    # Custom Login Dialog
+    dialog = tk.Toplevel(root)
+    dialog.title("CyberGuard Login")
+    dialog.geometry("350x250")
+    dialog.attributes("-topmost", True)
     
-    email = simpledialog.askstring("CyberGuard Login", "Please enter your registered email address to activate CyberGuard:", parent=root)
+    # Variables
+    email_var = tk.StringVar()
+    password_var = tk.StringVar()
+    result = {"token": None}
     
-    if email:
+    def on_submit():
+        email = email_var.get()
+        password = password_var.get()
+        
+        if not email or not password:
+            messagebox.showerror("Error", "Please fill in all fields", parent=dialog)
+            return
+            
         try:
-            response = requests.post(f"{API_URL}/auth/simple", json={"email": email})
+            response = requests.post(f"{API_URL}/auth/login", json={"email": email, "password": password})
+            
             if response.status_code == 200:
                 data = response.json()
+                is_paid = data.get("is_paid", False)
                 token = data.get("access_token")
+                
+                if not is_paid:
+                    messagebox.showwarning("Pro Subscription Required", "Your account is not a Pro subscriber.\nRedirecting to payment page...", parent=dialog)
+                    webbrowser.open("https://cyberguard-dashboard.onrender.com/dashboard") # Redirect to payment/dashboard
+                    return
+                
                 if token:
                     with open("token.txt", "w") as f:
                         f.write(token)
-                    messagebox.showinfo("Success", "CyberGuard activated successfully!")
-                    return token
+                    messagebox.showinfo("Success", "CyberGuard activated successfully!", parent=dialog)
+                    result["token"] = token
+                    dialog.destroy()
+                    root.destroy()
             else:
-                messagebox.showerror("Error", "Login failed. Please check your email.")
+                try:
+                    detail = response.json().get("detail", "Login failed")
+                except:
+                    detail = "Login failed"
+                messagebox.showerror("Error", detail, parent=dialog)
         except Exception as e:
-            messagebox.showerror("Error", f"Connection failed: {e}")
-            
-    root.destroy()
-    return None
+            messagebox.showerror("Error", f"Connection failed: {e}", parent=dialog)
+
+    # UI Elements
+    tk.Label(dialog, text="CyberGuard Professional", font=("Arial", 12, "bold")).pack(pady=10)
+    tk.Label(dialog, text="Sign in with your Pro account").pack(pady=5)
+    
+    tk.Label(dialog, text="Email:").pack(anchor="w", padx=20)
+    tk.Entry(dialog, textvariable=email_var, width=30).pack(padx=20)
+    
+    tk.Label(dialog, text="Password:").pack(anchor="w", padx=20, pady=(10, 0))
+    tk.Entry(dialog, textvariable=password_var, show="*", width=30).pack(padx=20)
+    
+    tk.Button(dialog, text="Sign In", command=on_submit, bg="#007bff", fg="white", width=20).pack(pady=20)
+    
+    # Wait for dialog
+    root.wait_window(dialog)
+    return result["token"]
 
 def get_token():
     """Load token from a local file or prompt login"""
