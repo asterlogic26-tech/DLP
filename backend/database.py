@@ -4,14 +4,8 @@ from sqlalchemy.orm import sessionmaker
 import os
 
 # Use environment variable or default to SQLite for local development
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-if not DATABASE_URL:
-    if os.getenv("VERCEL"):
-        # Vercel filesystem is read-only, use /tmp for temporary SQLite
-        DATABASE_URL = "sqlite:////tmp/sql_app.db"
-    else:
-        DATABASE_URL = "sqlite:///./sql_app.db"
+# On Render, set DATABASE_URL to your PostgreSQL connection string
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./sql_app.db")
 
 SQLALCHEMY_DATABASE_URL = DATABASE_URL
 

@@ -1,32 +1,46 @@
 services:
+  # Backend Service (Python/FastAPI)
   - type: web
     name: dlp-backend
-    env: python
+    runtime: python
+    region: singapore # Choose your preferred region
+    plan: free # or starter/standard
     buildCommand: pip install -r backend/requirements.txt
-    startCommand: gunicorn -k uvicorn.workers.UvicornWorker backend.main:app
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port 10000
     envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: dlp-db
-          property: connectionString
-      - key: JWT_SECRET
-        generateValue: true
-      - key: GOOGLE_CLIENT_ID
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: RAZORPAY_KEY
+        sync: false # User must provide this in dashboard
+      - key: RAZORPAY_SECRET
         sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      # - key: DATABASE_URL
+      #   fromDatabase:
+      #     name: dlp-db
+      #     property: connectionString
 
-  - type: web
+  # Frontend Service (React/Vite)
+  - type: static
     name: dlp-dashboard
-    env: node
+    runtime: static
+    region: singapore
+    plan: free
     buildCommand: cd dashboard && npm install && npm run build
-    startCommand: cd dashboard && npm run preview
+    publishDir: dashboard/dist
     envVars:
       - key: VITE_API_URL
         fromService:
           type: web
           name: dlp-backend
           property: url
+    routes:
+      - type: rewrite
+        source: /**
+        destination: /index.html
 
-databases:
-  - name: dlp-db
-    databaseName: dlp
-    user: dlp_user
+# databases:
+#   - name: dlp-db
+#     region: singapore
+#     plan: free # Note: Free DBs expire in 90 days on Render

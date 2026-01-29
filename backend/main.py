@@ -16,9 +16,7 @@ except ImportError:
 # Create tables if they don't exist
 models.Base.metadata.create_all(bind=database.engine)
 
-# Configure root_path for Vercel deployment
-root_path = "/api" if os.getenv("VERCEL") else ""
-app = FastAPI(root_path=root_path)
+app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
