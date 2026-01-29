@@ -33,6 +33,74 @@ app.add_middleware(
 def read_root():
     return {"message": "CyberGuard DLP Backend Running"}
 
+from fastapi.responses import HTMLResponse
+
+@app.get("/auth/google_login_simulation", response_class=HTMLResponse)
+def google_login_simulation(callback_port: int):
+    """
+    Simulates a Google Login page for demonstration.
+    In production, this would redirect to https://accounts.google.com/o/oauth2/v2/auth...
+    """
+    return f"""
+    <html>
+        <body style="font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f2f5;">
+            <div style="background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; max-width: 400px;">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" width="60" style="margin-bottom: 20px;">
+                <h2 style="color: #202124; margin-bottom: 10px;">Sign in with Google</h2>
+                <p style="color: #5f6368; margin-bottom: 30px;">Choose an account to continue to CyberGuard</p>
+                
+                <div style="text-align: left;">
+                    <div style="padding: 10px; border: 1px solid #dadce0; border-radius: 4px; margin-bottom: 10px; cursor: pointer; display: flex; align-items: center;" onclick="login('user@example.com', 'Demo User')">
+                        <div style="width: 30px; height: 30px; background: #e8f0fe; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #1a73e8; font-weight: bold; margin-right: 10px;">D</div>
+                        <div>
+                            <div style="font-weight: 500; color: #3c4043;">Demo User</div>
+                            <div style="font-size: 12px; color: #5f6368;">user@example.com</div>
+                        </div>
+                    </div>
+                    
+                    <div style="padding: 10px; border: 1px solid #dadce0; border-radius: 4px; margin-bottom: 10px; cursor: pointer; display: flex; align-items: center;" onclick="login('shubham@gmail.com', 'Shubham')">
+                        <div style="width: 30px; height: 30px; background: #ceead6; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #137333; font-weight: bold; margin-right: 10px;">S</div>
+                        <div>
+                            <div style="font-weight: 500; color: #3c4043;">Shubham</div>
+                            <div style="font-size: 12px; color: #5f6368;">shubham@gmail.com</div>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                    async function login(email, name) {
+                        // Create user in backend via API
+                        const response = await fetch('/auth/google_callback_simulation', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({email, name})
+                        });
+                        const data = await response.json();
+                        
+                        // Redirect back to localhost agent
+                        window.location.href = `http://localhost:{callback_port}/?token=${{data.access_token}}`;
+                    }
+                </script>
+            </div>
+        </body>
+    </html>
+    """
+
+@app.post("/auth/google_callback_simulation")
+def google_callback_simulation(data: dict, db: Session = Depends(database.get_db)):
+    email = data.get('email')
+    name = data.get('name')
+    
+    user = db.query(models.User).filter(models.User.email == email).first()
+    if not user:
+        user = models.User(email=email, full_name=name)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    
+    access_token = auth.create_access_token(data={"sub": str(user.id)})
+    return {"access_token": access_token}
+
 @app.post("/auth/google", response_model=schemas.Token)
 def google_login(login_data: schemas.GoogleLogin, db: Session = Depends(database.get_db)):
     google_user = auth.verify_google_token(login_data.token)

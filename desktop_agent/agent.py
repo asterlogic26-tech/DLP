@@ -126,6 +126,9 @@ def block_installations():
 
 import webbrowser
 
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import socket
+
 def login_prompt():
     """Ask user for email/password and get token from backend"""
     root = tk.Tk()
@@ -134,7 +137,7 @@ def login_prompt():
     # Custom Login Dialog
     dialog = tk.Toplevel(root)
     dialog.title("CyberGuard Login")
-    dialog.geometry("350x250")
+    dialog.geometry("350x350") # Increased height for Google Button
     dialog.attributes("-topmost", True)
     
     # Variables
@@ -179,6 +182,46 @@ def login_prompt():
         except Exception as e:
             messagebox.showerror("Error", f"Connection failed: {e}", parent=dialog)
 
+    def on_google_login():
+        # 1. Start Local Server to listen for token
+        class CallbackHandler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.send_response(200)
+                self.send_header('Content-type', 'text/html')
+                self.end_headers()
+                self.wfile.write(b"<html><body style='font-family:sans-serif; text-align:center; padding-top:50px;'><h1>Login Successful!</h1><p>You can close this tab and return to the application.</p><script>window.close();</script></body></html>")
+                
+                # Extract token from query params: /?token=...
+                if 'token=' in self.path:
+                    token = self.path.split('token=')[1].split('&')[0]
+                    result["token"] = token
+                
+                # Stop server (via exception or flag)
+                threading.Thread(target=httpd.shutdown).start()
+
+        # Find free port
+        port = 5678
+        server_address = ('localhost', port)
+        httpd = HTTPServer(server_address, CallbackHandler)
+        
+        # 2. Open Browser to Backend Google Auth Simulation
+        # In real world: backend handles OAuth and redirects back to localhost:5678
+        webbrowser.open(f"{API_URL}/auth/google_login_simulation?callback_port={port}")
+        
+        # 3. Wait for request
+        messagebox.showinfo("Google Login", "A browser window has opened.\nPlease complete the login there.", parent=dialog)
+        httpd.serve_forever()
+        
+        # 4. Process Result
+        if result["token"]:
+            with open("token.txt", "w") as f:
+                f.write(result["token"])
+            messagebox.showinfo("Success", "CyberGuard activated successfully with Google!", parent=dialog)
+            dialog.destroy()
+            root.destroy()
+        else:
+            messagebox.showerror("Error", "Google Login failed or cancelled.", parent=dialog)
+
     # UI Elements
     tk.Label(dialog, text="CyberGuard Professional", font=("Arial", 12, "bold")).pack(pady=10)
     tk.Label(dialog, text="Sign in with your Pro account").pack(pady=5)
@@ -189,7 +232,13 @@ def login_prompt():
     tk.Label(dialog, text="Password:").pack(anchor="w", padx=20, pady=(10, 0))
     tk.Entry(dialog, textvariable=password_var, show="*", width=30).pack(padx=20)
     
-    tk.Button(dialog, text="Sign In", command=on_submit, bg="#007bff", fg="white", width=20).pack(pady=20)
+    tk.Button(dialog, text="Sign In", command=on_submit, bg="#007bff", fg="white", width=20).pack(pady=15)
+    
+    # Divider
+    tk.Frame(dialog, height=1, bg="grey", width=200).pack(pady=5)
+    
+    # Google Button
+    tk.Button(dialog, text="Sign in with Google", command=on_google_login, bg="white", fg="black", width=20).pack(pady=10)
     
     # Wait for dialog
     root.wait_window(dialog)
