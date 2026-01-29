@@ -47,14 +47,32 @@ document.addEventListener("input", (e) => {
 const BAD_KEYWORDS = ["xxx", "porn", "lottery winner", "click here to claim"];
 const pageText = document.body.innerText.toLowerCase();
 if (BAD_KEYWORDS.some(kw => pageText.includes(kw))) {
-  // Report event
+  // 1. Block the Content
+  document.body.innerHTML = `
+    <div style="
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: #0f172a; color: white; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; z-index: 999999; font-family: sans-serif;
+    ">
+      <h1 style="color: #ef4444; font-size: 48px; margin-bottom: 20px;">🚫 Content Blocked</h1>
+      <p style="font-size: 20px; color: #cbd5e1; margin-bottom: 30px;">
+        CyberGuard detected unsafe/adult content on this page.
+      </p>
+      <button onclick="window.history.back()" style="
+        background: #3b82f6; color: white; border: none; padding: 12px 24px;
+        border-radius: 8px; font-size: 18px; cursor: pointer;
+      ">Go Back</button>
+    </div>
+  `;
+
+  // 2. Report event
   chrome.runtime.sendMessage({
     type: "LOG_EVENT",
     data: {
-      event_type: "CONTENT_FILTER",
-      description: "Suspicious content detected on page",
+      event_type: "CONTENT_BLOCKED",
+      description: "Adult/Spam content blocked",
       url: window.location.href,
-      action_taken: "WARNING"
+      action_taken: "BLOCKED"
     }
   });
 }
