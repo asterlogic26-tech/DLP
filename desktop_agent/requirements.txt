@@ -1,5 +1,4 @@
 pyperclip
-plyer
 requests
 watchdog
 psutil

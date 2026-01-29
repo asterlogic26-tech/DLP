@@ -4,7 +4,6 @@ import os
 import sys
 import ctypes
 import pyperclip
-from plyer import notification
 import requests
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -280,6 +279,14 @@ def start_file_monitoring():
     observer.start()
     return observer
 
+def show_alert(title, message):
+    """Show a Windows message box in a separate thread to avoid blocking."""
+    try:
+        # 0x30 = MB_ICONWARNING, 0x40000 = MB_TOPMOST
+        ctypes.windll.user32.MessageBoxW(0, message, title, 0x30 | 0x40000)
+    except:
+        pass
+
 def monitor_clipboard():
     if not is_admin():
         root = tk.Tk()
@@ -326,12 +333,11 @@ def monitor_clipboard():
                         print(f"\n[!] ALERT: Detected {p_type} in clipboard!")
                         pyperclip.copy("") 
                         last_value = "" 
-                        notification.notify(
-                            title='CyberGuard DLP Alert',
-                            message=f'Blocked copy of sensitive {p_type} data!',
-                            app_name='CyberGuard',
-                            timeout=5
-                        )
+                        threading.Thread(
+                            target=show_alert, 
+                            args=('CyberGuard DLP Alert', f'Blocked copy of sensitive {p_type} data!'), 
+                            daemon=True
+                        ).start()
                         log_event("CLIPBOARD_LEAK", f"User tried to copy {p_type}", "BLOCKED")
                         break
             
