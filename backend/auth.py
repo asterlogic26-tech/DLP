@@ -7,7 +7,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
-from . import models, database
+import models, database
 
 # SECRET KEY for JWT (Should be env var in prod)
 SECRET_KEY = "supersecretkeyForDevelopmentOnlyChangeMeInProd"
