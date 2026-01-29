@@ -1,11 +1,22 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from typing import List
 import models, schemas, auth, database
 
 # Create tables
 models.Base.metadata.create_all(bind=database.engine)
+
+# Auto-migrate: Add missing columns if they don't exist
+try:
+    with database.engine.connect() as conn:
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS hashed_password VARCHAR;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR;"))
+        conn.commit()
+        print("Schema migration completed successfully.")
+except Exception as e:
+    print(f"Migration warning (can be ignored if columns exist): {e}")
 
 app = FastAPI(title="CyberGuard DLP API")
 
