@@ -69,10 +69,10 @@ export default function Dashboard() {
                 <span className="font-bold">Upgrade to Pro ($9.99)</span>
               </button>
             ) : (
-              <a href="https://github.com/asterlogic26-tech/DLP/archive/refs/heads/main.zip" target="_blank" className="w-full h-full flex flex-col items-center justify-center text-blue-400 hover:bg-slate-800 rounded-lg transition p-4">
-                <Download size={32} className="mb-2" />
-                <span className="font-bold">Download Extension (ZIP)</span>
-              </a>
+              <a href="/extension.zip" download="CyberGuard_Extension.zip" className="w-full h-full flex flex-col items-center justify-center text-blue-400 hover:bg-slate-800 rounded-lg transition p-4">
+            <Download size={32} className="mb-2" />
+            <span className="font-bold">Download Extension (ZIP)</span>
+          </a>
             )}
           </div>
         </div>
