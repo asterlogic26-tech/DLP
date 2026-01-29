@@ -1,31 +1,38 @@
 from pydantic import BaseModel
-from typing import Optional
-import uuid
+from typing import List, Optional
 from datetime import datetime
 
-class UserLogin(BaseModel):
+class UserBase(BaseModel):
     email: str
-    password: str
 
-class GoogleLogin(BaseModel):
-    token: str
+class UserCreate(UserBase):
+    pass
 
-class Token(BaseModel):
-    token: str
-
-class EventCreate(BaseModel):
-    data_type: str
-    action: str
-    domain: str
-
-class EventOut(EventCreate):
-    id: uuid.UUID
-    created_at: datetime
+class UserOut(UserBase):
+    id: int
+    is_paid: bool
     class Config:
         orm_mode = True
 
-class SubscriptionCreate(BaseModel):
-    plan: str
+class EventBase(BaseModel):
+    event_type: str
+    description: str
+    url: str
+    action_taken: str
 
-class SubscriptionStatus(BaseModel):
-    active: bool
+class EventCreate(EventBase):
+    pass
+
+class EventOut(EventBase):
+    id: int
+    timestamp: datetime
+    class Config:
+        orm_mode = True
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    is_paid: bool
+
+class GoogleLogin(BaseModel):
+    token: str

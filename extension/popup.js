@@ -1,23 +1,15 @@
-document.getElementById("login").onclick = () => {
-  chrome.tabs.create({ url: "http://localhost:5173" });
-};
-
-// Check status from background page
-chrome.runtime.sendMessage({ type: "GET_STATUS" }, (response) => {
-    // This part requires background.js to listen for GET_STATUS
-    // For now, we'll just check storage directly if possible or rely on simple UI
-    updateUI();
+document.getElementById("dashboard-btn").addEventListener("click", () => {
+  // Open the deployed dashboard URL (or localhost for dev)
+  chrome.tabs.create({ url: "http://localhost:5173" }); // Update this after deployment!
 });
 
-function updateUI() {
-    chrome.storage.local.get(["token"], (result) => {
-        const statusDiv = document.getElementById("status");
-        if (result.token) {
-            statusDiv.innerHTML = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">● Connected</span>';
-        } else {
-            statusDiv.innerHTML = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">● Not Connected</span>';
-        }
-    });
-}
-
-updateUI();
+chrome.storage.local.get("token", (data) => {
+  const statusText = document.getElementById("status-text");
+  if (data.token) {
+    statusText.textContent = "Protected";
+    statusText.className = "active";
+  } else {
+    statusText.textContent = "Login Required";
+    statusText.className = "inactive";
+  }
+});

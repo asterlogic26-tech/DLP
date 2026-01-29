@@ -1,22 +1,15 @@
-from fastapi import FastAPI, Depends, HTTPException, status, Request
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List
-import uuid
-import os
-import json
+from . import models, schemas, auth, database
 
-# Fix for running as script
-try:
-    from . import models, schemas, auth, database
-except ImportError:
-    import models, schemas, auth, database
-
-# Create tables if they don't exist
+# Create tables
 models.Base.metadata.create_all(bind=database.engine)
 
-app = FastAPI()
+app = FastAPI(title="CyberGuard DLP API")
 
+# CORS - Allow everything for MVP
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -25,87 +18,51 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Payments temporarily disabled; Razorpay removed
-
-@app.post("/auth/login", response_model=schemas.Token)
-def login(user_in: schemas.UserLogin, db: Session = Depends(database.get_db)):
-    user = db.query(models.User).filter(models.User.email == user_in.email).first()
-    if not user or not auth.verify_password(user_in.password, user.password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
-        )
-    
-    access_token = auth.create_access_token(
-        data={"id": str(user.id), "org_id": str(user.org_id)}
-    )
-    return {"token": access_token}
+@app.get("/")
+def read_root():
+    return {"message": "CyberGuard DLP Backend Running"}
 
 @app.post("/auth/google", response_model=schemas.Token)
 def google_login(login_data: schemas.GoogleLogin, db: Session = Depends(database.get_db)):
-    try:
-        google_user = auth.verify_google_token(login_data.token)
-    except ValueError as e:
-         # Return the specific verification error (e.g. "Audience mismatch", "Token expired")
-         raise HTTPException(status_code=400, detail=f"Invalid Google Token: {str(e)}")
-    
-    email = google_user['email']
+    google_user = auth.verify_google_token(login_data.token)
+    email = google_user.get('email')
+    name = google_user.get('name')
     
     user = db.query(models.User).filter(models.User.email == email).first()
     if not user:
-        user = models.User(
-            email=email,
-            password="",
-            org_id=uuid.uuid4()
-        )
+        user = models.User(email=email, full_name=name)
         db.add(user)
         db.commit()
         db.refresh(user)
     
-    access_token = auth.create_access_token(
-        data={"id": str(user.id), "org_id": str(user.org_id)}
-    )
-    return {"token": access_token}
+    access_token = auth.create_access_token(data={"sub": str(user.id)})
+    return {"access_token": access_token, "token_type": "bearer", "is_paid": user.is_paid}
 
-@app.get("/auth/status", response_model=schemas.SubscriptionStatus)
-def get_status(
-    current_user: dict = Depends(auth.get_current_user),
-    db: Session = Depends(database.get_db)
-):
-    # Temporarily consider all users active until payments are re-enabled
-    return {"active": True}
+@app.post("/payment/upgrade", response_model=schemas.UserOut)
+def upgrade_user(current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(database.get_db)):
+    # Simulate payment success
+    current_user.is_paid = True
+    db.commit()
+    db.refresh(current_user)
+    return current_user
 
-# Subscription creation removed
-
-# Razorpay webhook removed
-
-
-@app.post("/events", response_model=dict)
+@app.post("/events", response_model=schemas.EventOut)
 def create_event(
     event: schemas.EventCreate,
-    current_user: dict = Depends(auth.get_current_user),
+    current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(database.get_db)
 ):
-    db_event = models.Event(
-        user_id=current_user["id"],
-        org_id=current_user["org_id"],
-        **event.dict()
-    )
+    # Only allow logging if user is paid? Or allow all but show only to paid?
+    # Let's allow logging for all authenticated users.
+    db_event = models.Event(**event.dict(), user_id=current_user.id)
     db.add(db_event)
     db.commit()
     db.refresh(db_event)
-    return {"status": "ok"}
+    return db_event
 
 @app.get("/events", response_model=List[schemas.EventOut])
 def read_events(
-    current_user: dict = Depends(auth.get_current_user),
+    current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(database.get_db)
 ):
-    events = db.query(models.Event).filter(
-        models.Event.org_id == current_user["org_id"]
-    ).order_by(models.Event.created_at.desc()).limit(50).all()
-    return events
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("backend.main:app", host="0.0.0.0", port=3000, reload=True)
+    return db.query(models.Event).filter(models.Event.user_id == current_user.id).order_by(models.Event.timestamp.desc()).all()

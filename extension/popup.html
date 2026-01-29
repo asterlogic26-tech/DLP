@@ -1,26 +1,26 @@
 <!DOCTYPE html>
-<html class="w-64">
+<html>
 <head>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body { width: 300px; background: #0f172a; color: white; font-family: sans-serif; padding: 20px; }
+    .status { text-align: center; padding: 20px; border: 1px solid #334155; border-radius: 8px; margin-bottom: 20px; }
+    .active { color: #10b981; font-weight: bold; }
+    .inactive { color: #ef4444; }
+    button { width: 100%; padding: 10px; background: #10b981; border: none; color: white; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    button:hover { opacity: 0.9; }
+  </style>
 </head>
-<body class="bg-gray-50 p-4">
-    <div class="text-center">
-        <h1 class="text-xl font-bold text-gray-900 mb-2">DLP Protection</h1>
-        <div id="status" class="mb-4">
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                Checking status...
-            </span>
-        </div>
-        
-        <button id="login" class="w-full bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 transition-colors mb-2">
-            Open Dashboard / Login
-        </button>
-        
-        <div id="info" class="text-xs text-gray-500 mt-2 text-left hidden">
-            <p><strong>Account:</strong> <span id="email">...</span></p>
-            <p><strong>Plan:</strong> <span id="plan">...</span></p>
-        </div>
-    </div>
-    <script src="popup.js"></script>
+<body>
+  <div style="text-align: center; margin-bottom: 20px;">
+    <h3>CyberGuard</h3>
+  </div>
+  
+  <div class="status">
+    Status: <span id="status-text" class="inactive">Not Connected</span>
+  </div>
+
+  <button id="dashboard-btn">Open Dashboard</button>
+
+  <script src="popup.js"></script>
 </body>
 </html>

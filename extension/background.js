@@ -1,119 +1,32 @@
-let authToken = null;
-let apiBaseUrl = "http://localhost:8000"; // Default, will be updated from content script
-let isProtected = false;
+let API_URL = "http://localhost:8000"; // Will be updated dynamically if possible
 
-// Load token and config on startup
-chrome.storage.local.get(["token", "apiUrl"], (result) => {
-  if (result.token) {
-    authToken = result.token;
-  }
-  if (result.apiUrl) {
-    apiBaseUrl = result.apiUrl;
-  }
-  if (authToken) checkLicense();
-});
-
-// Listen for token from content script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === "SET_TOKEN" && message.token) {
-    let changed = false;
-    if (authToken !== message.token) {
-        authToken = message.token;
-        chrome.storage.local.set({ token: message.token });
-        changed = true;
-    }
-    if (message.apiUrl && apiBaseUrl !== message.apiUrl) {
-        apiBaseUrl = message.apiUrl;
-        chrome.storage.local.set({ apiUrl: message.apiUrl });
-        changed = true;
-    }
-    
-    if (changed) {
-        checkLicense();
-        console.log("Token/Config updated");
-    }
-  }
-});
-
-// Periodic License Check (every 5 minutes)
-chrome.alarms.create("licenseCheck", { periodInMinutes: 5 });
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === "licenseCheck") {
-    checkLicense();
-  }
-});
-
-async function checkLicense() {
-  if (!authToken) return;
-
-  try {
-    const response = await fetch(`${apiBaseUrl}/auth/status`, {
-      headers: {
-        "Authorization": `Bearer ${authToken}`
-      }
+  if (message.type === "SAVE_TOKEN") {
+    chrome.storage.local.set({ token: message.token }, () => {
+      console.log("Token saved");
     });
-    
-    if (response.ok) {
-        const data = await response.json();
-        if (data.active) {
-            enableProtection();
-        } else {
-            disableProtection();
-        }
-    } else {
-        disableProtection(); // Auth failed or server error
-    }
-  } catch (e) {
-    console.error("License check failed", e);
-    // Optionally disable protection on network error, or keep last known state
+  } else if (message.type === "GET_TOKEN") {
+    chrome.storage.local.get("token", (data) => {
+      sendResponse({ token: data.token });
+    });
+    return true; // Async response
+  } else if (message.type === "LOG_EVENT") {
+    logEventToBackend(message.data);
   }
-}
+});
 
-function enableProtection() {
-  if (isProtected) return;
-  isProtected = true;
-  console.log("Protection Enabled");
-  
-  // Example: Block Social Media
-  const rules = [
-    {
-      id: 1,
-      priority: 1,
-      action: { type: "block" },
-      condition: { urlFilter: "facebook.com", resourceTypes: ["main_frame"] }
-    },
-    {
-      id: 2,
-      priority: 1,
-      action: { type: "block" },
-      condition: { urlFilter: "instagram.com", resourceTypes: ["main_frame"] }
-    },
-    {
-      id: 3,
-      priority: 1,
-      action: { type: "block" },
-      condition: { urlFilter: "twitter.com", resourceTypes: ["main_frame"] }
-    }
-  ];
-  
-  chrome.declarativeNetRequest.updateDynamicRules({
-    addRules: rules,
-    removeRuleIds: [1, 2, 3]
-  });
-  
-  chrome.action.setBadgeText({ text: "ON" });
-  chrome.action.setBadgeBackgroundColor({ color: "#4F46E5" });
-}
+function logEventToBackend(eventData) {
+  chrome.storage.local.get("token", (data) => {
+    if (!data.token) return;
 
-function disableProtection() {
-  if (!isProtected) return;
-  isProtected = false;
-  console.log("Protection Disabled");
-  
-  chrome.declarativeNetRequest.updateDynamicRules({
-    removeRuleIds: [1, 2, 3]
+    // Use fetch
+    fetch(`${API_URL}/events`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${data.token}`
+      },
+      body: JSON.stringify(eventData)
+    }).catch(err => console.error("Failed to log event", err));
   });
-  
-  chrome.action.setBadgeText({ text: "OFF" });
-  chrome.action.setBadgeBackgroundColor({ color: "#6B7280" });
 }

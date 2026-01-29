@@ -1,7 +1,7 @@
 {
-  "name": "dlp-dashboard",
+  "name": "cyberguard-dashboard",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,8 +11,10 @@
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-router-dom": "^6.22.0",
     "lucide-react": "^0.368.0",
-    "@react-oauth/google": "^0.12.1"
+    "@react-oauth/google": "^0.12.1",
+    "axios": "^1.6.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.66",

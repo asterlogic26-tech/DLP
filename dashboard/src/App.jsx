@@ -1,26 +1,30 @@
-import { useState, useEffect } from "react";
-import Login from "./Login";
-import Dashboard from "./Dashboard";
-import { API_URL } from "./api";
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Landing from './components/Landing';
+import Dashboard from './components/Dashboard';
+import Login from './components/Login';
 
-export default function App() {
-  const [token, setToken] = useState(localStorage.token);
+function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // Expose configuration for the extension
-    localStorage.api_url = API_URL;
-    localStorage.dlp_app_id = "true";
+    const token = localStorage.getItem('token');
+    if (token) setIsAuthenticated(true);
   }, []);
 
-  const handleLogin = (newToken) => {
-    localStorage.token = newToken;
-    setToken(newToken);
-  };
-
-  const handleLogout = () => {
-    delete localStorage.token;
-    setToken(null);
-  };
-
-  return token ? <Dashboard onLogout={handleLogout} /> : <Login onLogin={handleLogin} />;
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={
+          isAuthenticated ? <Navigate to="/dashboard" /> : <Login setAuth={setIsAuthenticated} />
+        } />
+        <Route path="/dashboard" element={
+          isAuthenticated ? <Dashboard /> : <Navigate to="/login" />
+        } />
+      </Routes>
+    </Router>
+  );
 }
+
+export default App;

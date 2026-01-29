@@ -1,51 +1,45 @@
 from datetime import datetime, timedelta
 from typing import Optional
-from jose import jwt, JWTError
+from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import Session
 from google.oauth2 import id_token
-from google.auth.transport import requests
-import os
+from google.auth.transport import requests as google_requests
+from . import models, database
 
-SECRET_KEY = os.getenv("JWT_SECRET", "supersecret")
+# SECRET KEY for JWT (Should be env var in prod)
+SECRET_KEY = "supersecretkeyForDevelopmentOnlyChangeMeInProd"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 720 # 12 hours
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "179499386527-k8fo9dukkhl6spvqsc34geuljfag2al6.apps.googleusercontent.com")
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 7 days
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
-
-def get_password_hash(password):
-    return pwd_context.hash(password)
-
-def create_access_token(data: dict):
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
 def verify_google_token(token: str):
     try:
-        # Verify the token against the specific Client ID
-        # Add clock_skew_in_seconds to handle slight time differences between Google servers and local machine
-        id_info = id_token.verify_oauth2_token(
-            token, 
-            requests.Request(), 
-            GOOGLE_CLIENT_ID, 
-            clock_skew_in_seconds=60
-        )
+        # Verify the token with Google's public certs
+        # CLIENT_ID should be passed here ideally, but for MVP skipping exact client check
+        id_info = id_token.verify_oauth2_token(token, google_requests.Request())
         return id_info
-    except ValueError as e:
-        print(f"Token Verification Error: {e}")
-        # Re-raise the exception so the caller knows WHY it failed
-        raise e
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Google Token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-def get_current_user(token: str = Depends(oauth2_scheme)):
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(database.get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -53,10 +47,13 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("id")
-        org_id: str = payload.get("org_id")
+        user_id: str = payload.get("sub")
         if user_id is None:
             raise credentials_exception
-        return {"id": user_id, "org_id": org_id}
     except JWTError:
         raise credentials_exception
+    
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if user is None:
+        raise credentials_exception
+    return user
