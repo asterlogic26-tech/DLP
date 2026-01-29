@@ -15,7 +15,7 @@ chrome.runtime.sendMessage({ type: "GET_TOKEN" }, (response) => {
 });
 
 // Sync Token from Dashboard if we are on the dashboard
-if (window.location.href.includes("extension-blocker") || window.location.href.includes("localhost")) {
+if (window.location.href.includes("extension-blocker") || window.location.href.includes("dlp") || window.location.href.includes("localhost")) {
   const token = localStorage.getItem("token");
   if (token) {
     chrome.runtime.sendMessage({ type: "SAVE_TOKEN", token: token });
