@@ -87,12 +87,11 @@ def block_usb_storage():
                 if not authorized:
                     print(f"[!!!] BLOCKING UNAUTHORIZED USB: {drive_letter}")
                     os.system(f"mountvol {drive_letter} /D")
-                    notification.notify(
-                        title='CyberGuard Security',
-                        message=f'Blocked unauthorized USB device: {drive_letter}',
-                        app_name='CyberGuard',
-                        timeout=5
-                    )
+                    threading.Thread(
+                        target=show_alert,
+                        args=('CyberGuard Security', f'Blocked unauthorized USB device: {drive_letter}'),
+                        daemon=True
+                    ).start()
                     log_event("USB_BLOCKED", f"Unauthorized USB inserted: {drive_letter}", "BLOCKED")
         except Exception as e:
             pass
@@ -111,12 +110,11 @@ def block_installations():
                         if p_name not in ALLOWED_INSTALLERS:
                             print(f"[!!!] BLOCKING INSTALLATION: {p_name}")
                             proc.kill()
-                            notification.notify(
-                                title='CyberGuard Security',
-                                message=f'Blocked unauthorized installation: {p_name}',
-                                app_name='CyberGuard',
-                                timeout=5
-                            )
+                            threading.Thread(
+                                target=show_alert,
+                                args=('CyberGuard Security', f'Blocked unauthorized installation: {p_name}'),
+                                daemon=True
+                            ).start()
                             log_event("INSTALL_BLOCKED", f"Blocked process: {p_name}", "KILLED")
                 except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                     pass
@@ -196,7 +194,7 @@ def login_prompt():
                     token = self.path.split('token=')[1].split('&')[0]
                     result["token"] = token
                 
-                # Stop server (via exception or flag)
+                # Stop server
                 threading.Thread(target=httpd.shutdown).start()
 
         # Find free port
@@ -204,23 +202,29 @@ def login_prompt():
         server_address = ('localhost', port)
         httpd = HTTPServer(server_address, CallbackHandler)
         
+        # Run server in a separate thread to avoid blocking UI
+        server_thread = threading.Thread(target=httpd.serve_forever)
+        server_thread.daemon = True
+        server_thread.start()
+        
         # 2. Open Browser to Backend Google Auth Simulation
-        # In real world: backend handles OAuth and redirects back to localhost:5678
         webbrowser.open(f"{API_URL}/auth/google_login_simulation?callback_port={port}")
         
-        # 3. Wait for request
+        # 3. Poll for result without blocking
         messagebox.showinfo("Google Login", "A browser window has opened.\nPlease complete the login there.", parent=dialog)
-        httpd.serve_forever()
         
-        # 4. Process Result
-        if result["token"]:
-            with open("token.txt", "w") as f:
-                f.write(result["token"])
-            messagebox.showinfo("Success", "CyberGuard activated successfully with Google!", parent=dialog)
-            dialog.destroy()
-            root.destroy()
-        else:
-            messagebox.showerror("Error", "Google Login failed or cancelled.", parent=dialog)
+        def check_google_token():
+            if result["token"]:
+                with open("token.txt", "w") as f:
+                    f.write(result["token"])
+                messagebox.showinfo("Success", "CyberGuard activated successfully with Google!", parent=dialog)
+                dialog.destroy()
+                root.destroy()
+            else:
+                # Check again in 1 second
+                dialog.after(1000, check_google_token)
+        
+        check_google_token()
 
     # UI Elements
     tk.Label(dialog, text="CyberGuard Professional", font=("Arial", 12, "bold")).pack(pady=10)
@@ -304,12 +308,11 @@ class DLPFileHandler(FileSystemEventHandler):
             for p_type, pattern in PATTERNS.items():
                 if re.search(pattern, content):
                     print(f"\n[!] ALERT: Found {p_type} in file: {filepath}")
-                    notification.notify(
-                        title='CyberGuard File Alert',
-                        message=f'Sensitive {p_type} found in {os.path.basename(filepath)}',
-                        app_name='CyberGuard',
-                        timeout=5
-                    )
+                    threading.Thread(
+                        target=show_alert,
+                        args=('CyberGuard File Alert', f'Sensitive {p_type} found in {os.path.basename(filepath)}'),
+                        daemon=True
+                    ).start()
                     log_event("FILE_SCAN", f"Sensitive {p_type} found in {filepath}", "FLAGGED")
                     break
         except Exception as e:
@@ -342,6 +345,12 @@ def monitor_clipboard():
         root.withdraw()
         messagebox.showerror("Administrator Required", "CyberGuard Agent must be run as Administrator to function correctly.\n\nPlease right-click the app and select 'Run as Administrator'.")
         root.destroy()
+        return
+
+    # Ensure login happens on Main Thread before any monitoring starts
+    print(">>> Checking Authentication...")
+    if not get_token():
+        print("   [!] Login required but cancelled/failed. Exiting.")
         return
 
     # In windowed mode (PyInstaller --noconsole), print() might fail or go nowhere.
