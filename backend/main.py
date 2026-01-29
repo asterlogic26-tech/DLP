@@ -38,6 +38,20 @@ def google_login(login_data: schemas.GoogleLogin, db: Session = Depends(database
     access_token = auth.create_access_token(data={"sub": str(user.id)})
     return {"access_token": access_token, "token_type": "bearer", "is_paid": user.is_paid}
 
+@app.post("/auth/simple", response_model=schemas.Token)
+def simple_login(login_data: schemas.SimpleLogin, db: Session = Depends(database.get_db)):
+    """Simple email login for Desktop Agent (MVP)"""
+    email = login_data.email
+    user = db.query(models.User).filter(models.User.email == email).first()
+    if not user:
+        user = models.User(email=email, full_name="Desktop User")
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    
+    access_token = auth.create_access_token(data={"sub": str(user.id)})
+    return {"access_token": access_token, "token_type": "bearer", "is_paid": user.is_paid}
+
 @app.post("/payment/upgrade", response_model=schemas.UserOut)
 def upgrade_user(current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(database.get_db)):
     # Simulate payment success

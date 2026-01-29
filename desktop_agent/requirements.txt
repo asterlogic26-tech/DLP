@@ -1,0 +1,7 @@
+pyperclip
+plyer
+requests
+watchdog
+psutil
+pywin32
+wmi

@@ -36,3 +36,6 @@ class Token(BaseModel):
 
 class GoogleLogin(BaseModel):
     token: str
+
+class SimpleLogin(BaseModel):
+    email: str
